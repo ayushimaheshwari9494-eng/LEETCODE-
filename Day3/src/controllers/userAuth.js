@@ -4,6 +4,7 @@ const validate = require('../utils/validator');
 const bcrypt = require('bcrypt');
 
 const jwt = require('jsonwebtoken');
+const redisClient = require('../config/redis')
 
 const register=async(req,res)=>{
     try{
@@ -37,7 +38,7 @@ const login=async(req,res)=>{
         if(!password)
             throw new Error('Invalid credentials');
         const user=await User.findOne({emailId});
-        const ans=bcrypt.compare(password,user.password);
+        const ans=await bcrypt.compare(password,user.password);
         if(!ans)
             throw new Error('Invalid credentials');
 
@@ -50,3 +51,24 @@ const login=async(req,res)=>{
         res.status(401).send("error: "+err);
     }
 }
+
+const logout=async(req,res)=>{
+    try{
+      //validate the token middleware se hoga
+        //token ko redis ke blocklist me add karna hai
+         const {token}=req.cookies;
+         const payload=jwt.decode(token);
+         await redisClient.set(`token:${token}`,'Blocked');
+         await redisClient.expireAt(`token:${token}`,payload.exp);
+      //cookies clear kar dena
+      res.cookie('token',null,{expires:new Date(Date.now())});
+      res.send("User logged out successfully");
+    }
+    catch(err){
+        res.status(503).send("error: "+err);
+    }
+}
+
+
+
+module.exports={register,login,logout};

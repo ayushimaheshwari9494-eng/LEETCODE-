@@ -1,30 +1,51 @@
-
-const express = require ('express');
+const express = require('express');
 const app = express();
+
 require('dotenv').config();
+
 const main = require('./config/db');
- const cookieParser= require('cookie-parser');
+const cookieParser = require('cookie-parser');
+const authRouter = require('./routes/userauth');
+const Redisclient = require('./config/redis');
 
-
-
-
-
-
-
-
-
-
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
 
+// Test Route
+// app.get('/', (req, res) => {
+//     console.log('Request received');
+//     res.status(200).send('Server Working');
+// });
+
+// Routes
+app.use('/user', authRouter);
 
 
-main().then(() => {
-    console.log("Connected to DB");
-}).catch((err) => {
-    console.log("Error connecting to DB", err);
-});
+const InitializeConnection = async () => {
+    try {
+        await Promise.all([main(), Redisclient.connect()]);
+        console.log('Connected to DB and Redis');
+        app.listen(process.env.PORT, () => {
+            console.log(`Server running on ${process.env.PORT}`);
+        });
+}
+    catch (err) {
+        console.log('Error connecting to DB or Redis:', err);
+    }
+}
+InitializeConnection ();
 
-app.listen(process.env.PORT, () => {
-    console.log("Server is running on port:" + process.env.PORT);
-}) ;
+// Database Connection
+// main()
+//     .then(() => {
+//         console.log('Connected to DB');
+//     })
+//     .catch((err) => {
+//         console.log('Error connecting to DB:', err);
+//     });
+
+// // Start Server
+// app.listen(process.env.PORT, () => {
+//     console.log(`Server running on ${process.env.PORT}`);
+// });
